@@ -17,7 +17,10 @@ Approach (deliberately NOT "the last chart holds"):
       share for coins born after the cut (which nobody can name);
     * size probabilities = per-place log-cap trend fits (recency-
       weighted linear trend of each place's own cap across the marks,
-      extrapolated to each read, Normal sd widening with sqrt horizon),
+      extrapolated to each read with the trend contribution saturated
+      at the same 2.5h tau the coin drift uses -- an unsaturating
+      slope would put the 7-13h centre off the top of the bin range --
+      Normal sd 0.45 widening with sqrt horizon, named share 0.97),
       binned and averaged over the reads.
   Everything is deterministic: one fixed RNG seed, sorted candidate
   order, no wall clock, no network.  Stdlib only.
@@ -36,7 +39,7 @@ N_SIMS = 300
 # outside the candidate set).  Place 1 is the most likely to be taken by
 # a newcomer, so it keeps the largest unnamed share.
 PLACE_TARGET = {1: 0.65, 2: 0.75, 3: 0.75, 4: 0.75, 5: 0.75}
-SIZE_TARGET = 0.90
+SIZE_TARGET = 0.97
 MIN_P = 0.002
 # Drift (log10 cap per hour) is shrunk and capped: short histories and
 # wild 10-minute jumps must not dominate a 7-13h forecast.
@@ -53,7 +56,7 @@ VOL_CAP_H = 0.40
 SIGMA0 = 0.10
 # Size model: place-level log-cap trend (per hour, clipped) + sd that
 # widens with the square root of the horizon.
-SIZE_SD0 = 0.30
+SIZE_SD0 = 0.45
 SIZE_SD_H = 0.06
 SIZE_SLOPE_CAP = 0.60
 SIZE_SLOPE_FLOOR = -0.10
@@ -326,7 +329,7 @@ def main():
         # average the Normal(center(h), sd(h)) bin mass over the reads
         bin_mass = {}
         for h in horizons:
-            center = level + slope * h
+            center = level + slope * 2.5 * (1.0 - math.exp(-h / 2.5))
             sd = SIZE_SD0 + SIZE_SD_H * math.sqrt(h)
             for b in range(len(edges) + 1):
                 lo = -float("inf") if b == 0 else edges[b - 1]
